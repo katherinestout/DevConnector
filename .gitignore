@@ -1,4 +1,4 @@
 /node_modules
 
-config/mongo.json
-/config/mongo.json
+config/default.json
+/config/default.json
