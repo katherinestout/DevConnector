@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
 const auth = require('../../middleware/auth');
+const jwt = require('jsonwebtoken');
+const config = require('config');
+const {check, validationResult} = require('express-validator');
 
 const User = require('../../models/User');
 
@@ -16,6 +20,70 @@ router.get('/', auth, async(req, res) => {
         console.error(err.message);
         res.status(500).send("server error");
     }
+});
+
+//@route POST api/auth
+//@desc  Authenicate route and get token
+//@acess Public 
+
+router.post('/',[
+    check('email', 'Please include a valid email').isEmail(),
+    check('password', "Password is Required").exists()
+], async(req, res) => {
+    const errors = validationResult(req);
+    if(!errors.isEmpty()){
+        return res.status(400).json({errors: errors.array()});
+    }
+    //error checking
+    const {email, password} = req.body;
+    try{
+        let user = await User.findOne({ email });
+
+        if(!user){
+            res.status(400).json({errors: [{msg: "invalid credentials"}]});
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+
+        //check to see if match 
+
+
+        if(!isMatch){
+            res.status(400).json({errors: [{msg: "invalid credentials"}]});
+        }
+
+        const payload = {
+            user: {
+                id: user.id
+            }
+        }
+        //signing token, send back token
+        jwt.sign(
+            payload, 
+            config.get('jwtSecret'),
+            {expiresIn: 36000},
+            (err, token) => {
+                if(err) throw err;
+                res.json({token});
+
+            });
+
+        //return jsonwebtoken
+
+       // res.send('User Registered!')
+    } catch(err){
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+
+    //query mongoose
+    //see if user exists
+    //if user exists we'll send back error
+    //Get users gravatar
+    //Encrypt password using bcrypt
+    //return jsonwebtoken
+
+   
 });
 
 module.exports = router;
